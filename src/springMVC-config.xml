@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+    <!--扫描有注解的包-->
+    <context:component-scan base-package="com.xym.handler"/>
+    <!--配置视图解析器-->
+    <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <property name="prefix" value="/views/"/>
+        <property name="suffix" value=".jsp"/>
+    </bean>
+    <!--国际化支持-->
+    <bean id="messageSource" class="org.springframework.context.support.ResourceBundleMessageSource">
+        <property name="basename" value="i18n"/>
+    </bean>
+    <!--此注解会让所有请求转入mvc标签中匹配的地址，而会忽略掉@RequestMapping();-->
+    <mvc:view-controller path="SpringMVCHandler/testMVCViewController" view-name="success"/>
+    <!--此配置是SpringMVC的基础配置，很多功能都需要通过些注解来协调-->
+    <mvc:annotation-driven conversion-service="conversionService"/>
+    <!--此注解会让SpringMVC接收一个请求，并且该请求没有对应的@RequestMapping时，将该请求交给服务器默认的servlet处理-->
+    <mvc:default-servlet-handler/>
+
+    <!--1将自定义转换器纳入SpringIOC容器-->
+    <bean id="myConverter" class="com.xym.converter.MyConverter"/>
+    <!--2将myConverter再纳入SpringMVC提供的转换器Bean-->
+    <!--<bean id="conversionService" class="org.springframework.context.support.ConversionServiceFactoryBean">-->
+        <!--<property name="converters">-->
+            <!--<set>-->
+                <!--<ref bean="myConverter"/>-->
+            <!--</set>-->
+        <!--</property>-->
+    <!--</bean>-->
+    <!--将conversionService注册到annotation-driven中-->
+
+    <!--该Bean即可以实现格式化又可以实现类型转换,没必要再配ConversionServiceFactoryBean-->
+    <bean id="conversionService" class="org.springframework.format.support.FormattingConversionServiceFactoryBean">
+        <property name="converters">
+            <set>
+                <ref bean="myConverter"/>
+            </set>
+        </property>
+    </bean>
+
+    <!--配置用于实现文件上传的Bean，将其加入SpringIOC容器-->
+    <!--必需使用约定的ID名称-->
+    <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <property name="defaultEncoding" value="UTF-8"/>
+        <!--上传单个文件的最大值，单位Byte，如果-1表示无限制-->
+        <property name="maxUploadSize" value="102400"/>
+    </bean>
+
+    <!--将自己写的拦截器配置到SpringMVC中-->
+    <mvc:interceptors>
+        <!--<bean class="com.xym.interceptor.MyInterceptor"/>-->
+        <!--配置具体拦截路径-->
+        <mvc:interceptor>
+            <!--指定拦截的路径，基于ant风格-->
+            <mvc:mapping path="/**"/>
+            <!--指定排除的路径-->
+            <mvc:exclude-mapping path="/SpringMVCHandler/testUpload"/>
+            <bean class="com.xym.interceptor.MyInterceptor"/>
+        </mvc:interceptor>
+
+        <!--配置具体拦截路径-->
+        <mvc:interceptor>
+            <!--指定拦截的路径，基于ant风格-->
+            <mvc:mapping path="/**"/>
+            <!--指定排除的路径-->
+            <mvc:exclude-mapping path="/SpringMVCHandler/testUpload"/>
+            <bean class="com.xym.interceptor.MySecondInterceptor"/>
+        </mvc:interceptor>
+    </mvc:interceptors>
+
+    <!--通过配置方式处理异常-->
+    <bean class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver">
+        <!--异常对象保存在exceptionAttribute的value值中并放入request域中-->
+        <!--若以下属性不写异常对象的默认值为exception-->
+        <property name="exceptionAttribute" value="e"/>
+        <property name="exceptionMappings">
+            <props>
+                <prop key="java.lang.ArithmeticException">
+                    error
+                </prop>
+                <prop key="java.lang.NullPointerException">
+                    error
+                </prop>
+            </props>
+        </property>
+    </bean>
+</beans>
